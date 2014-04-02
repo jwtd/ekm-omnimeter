@@ -17,7 +17,6 @@ TODO:
 * Add specs
 * Add daemon to monitor meter's output at regular intervals
 
-NOTE:
 ## Requirements
 
 * Ruby 2.0.0 or higher
