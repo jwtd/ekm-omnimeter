@@ -13,7 +13,6 @@ contains a revenue-grade universal kWh power meter, three pulse counting inputs 
 and 2 controllable 50 mA at 12 volts relay outputs that can toggle 120v circuits when connected to their [EKM Switch120 power cord](http://www.ekmmetering.com/ekm-metering-products/accessories/switch120.html).
 
 TODO:
-* Cast values to their proper type and precision
 * Add specs
 * Add daemon to monitor meter's output at regular intervals
 
@@ -89,7 +88,7 @@ m.watts_total				# 2664
 m.power_factor_1			# 1.0
 m.power_factor_2			# 0.0
 m.power_factor_3			# 0.0
-m.maximum_demand			# 226400
+m.maximum_demand			# 22640.0
 m.maximum_demand_period		# 1
 m.ct_ratio					# 400
 m.pulse_1_count				# 3
