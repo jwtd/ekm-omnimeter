@@ -160,7 +160,6 @@ module EkmOmnimeter
 
     # Returns the correct measurement for voltage, current, and power based on the corresponding power_configuration
     def calculate_measurement(m1, m2, m3)
-      puts "****** #{power_configuration.inspect}   #{m1}, #{m2}, #{m3}"
       if power_configuration == :single_phase_2wire
         m1
       elsif power_configuration == :single_phase_3wire
@@ -194,7 +193,6 @@ module EkmOmnimeter
        :watts_l2,
        :watts_l3,
        :watts_total,
-       :maximum_demand,
        :ct_ratio,
        :pulse_1_count,
        :pulse_1_ratio,
@@ -218,7 +216,8 @@ module EkmOmnimeter
        :volts_l3,
        :amps_l1,
        :amps_l2,
-       :amps_l3
+       :amps_l3,
+       :maximum_demand
       ].each do |k|
         logger.debug "Casting #{k}"
         d[k] = to_f_with_decimal_places(d[k], 1) if d.has_key?(k)
@@ -276,7 +275,7 @@ module EkmOmnimeter
       response = get_remote_meter_data(request, read_bytes)
 
       if response.nil?
-        log.error "No response to request_a from meter #{address}"
+        logger.error "No response to request_a from meter #{meter_number}"
         raise EkmOmnimeter, "No response from meter."
       end
 
@@ -370,7 +369,7 @@ module EkmOmnimeter
       logger.debug "Socket write #{request}" unless logger.nil?
       response = get_remote_meter_data(request, read_bytes)
       if response.nil?
-        log.error "No response to request_a from meter #{address}"
+        logger.error "No response to request_a from meter #{meter_number}"
         raise EkmOmnimeter, "No response from meter."
       end
 
