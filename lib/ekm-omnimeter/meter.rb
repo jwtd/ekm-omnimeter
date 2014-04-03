@@ -41,7 +41,7 @@ module EkmOmnimeter
 
       # Collect the power configurations
       if VALID_POWER_CONFIGURATIONS.index(options[:power_configuration])
-        power_configuration = options[:power_configuration]
+        @power_configuration = options[:power_configuration]
       else
         raise EkmOmnimeterError, "Invalid power configuration #{options[:power_configuration]}. Valid values are #{VALID_POWER_CONFIGURATIONS.join(', ')}"
       end
@@ -160,14 +160,15 @@ module EkmOmnimeter
 
     # Returns the correct measurement for voltage, current, and power based on the corresponding power_configuration
     def calculate_measurement(m1, m2, m3)
+      puts "****** #{power_configuration.inspect}   #{m1}, #{m2}, #{m3}"
       if power_configuration == :single_phase_2wire
-        volts_l1
+        m1
       elsif power_configuration == :single_phase_3wire
-        (volts_l1 + volts_l2)
+        (m1 + m2)
       elsif power_configuration == :three_phase_3wire
-        (volts_l1 + :volts_l3)
+        (m1 + m3)
       elsif power_configuration == :three_phase_4wire
-        (volts_l1 + volts_l2 + volts_l3)
+        (m1 + m2 + m3)
       end
     end
 
@@ -346,9 +347,9 @@ module EkmOmnimeter
 
       # Calculate totals based on wiring configuration
       @values[:meter_timestamp] = meter_timestamp
-      @values[:volts] = calculate_measurement(d[:volts_l1], d[:volts_l2], d[:volts_l3])
-      @values[:amps]  = calculate_measurement(d[:amps_l1], d[:amps_l2], d[:amps_l3])
-      @values[:watts] = calculate_measurement(d[:watts_l1], d[:watts_l2], d[:watts_l3])
+      @values[:volts] = calculate_measurement(volts_l1, volts_l2, volts_l3)
+      @values[:amps]  = calculate_measurement(amps_l1, amps_l2, amps_l3)
+      @values[:watts] = calculate_measurement(watts_l1, watts_l2, watts_l3)
       @values[:total_forward_kwh] = total_kwh - total_reverse_kwh
       @values[:net_kwh] = total_forward_kwh - total_reverse_kwh
 
@@ -437,9 +438,9 @@ module EkmOmnimeter
 
       # Calculate totals based on wiring configuration
       @values[:meter_timestamp] = meter_timestamp
-      @values[:volts] = calculate_measurement(d[:volts_l1], d[:volts_l2], d[:volts_l3])
-      @values[:amps]  = calculate_measurement(d[:amps_l1], d[:amps_l2], d[:amps_l3])
-      @values[:watts] = calculate_measurement(d[:watts_l1], d[:watts_l2], d[:watts_l3])
+      @values[:volts] = calculate_measurement(volts_l1, volts_l2, volts_l3)
+      @values[:amps]  = calculate_measurement(amps_l1, amps_l2, amps_l3)
+      @values[:watts] = calculate_measurement(watts_l1, watts_l2, watts_l3)
 
       # Return the hash as an open struct
       return d

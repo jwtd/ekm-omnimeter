@@ -49,13 +49,20 @@ m = EkmOmnimeter::Meter.new(
   :remote_address=>'192.168.1.125',             # The IP address of your iSerial device
   :remote_port => 50000)                        # The port on which your iSerial device is listening
 
-# Read some values
+# These values change based on the value of :power_configuration in the constructor
+m.volts			            # 248.7
+m.amps			            # 21.6
+m.watts			            # 2664
+
+# Warning: Dates seem off
+# My computer clock said 2014-04-03 3:32PM when these outputs came out
+m.meter_timestamp	        # 2014-04-03 05:15:32
+m.computer_timestamp	    # Time.now() = 2014-04-03 15:32:10 -0400
+
+# Read meter values
 m.remote_address            # 192.168.1.125
 m.remote_port               # 50000
 m.meter_number              # 000300000001
-
-m.meter_timestamp			# 2014-04-04 06:02:48
-m.computer_timestamp		# 2014-04-03 14:54:10 -0400
 m.address					# 000300000001
 m.total_kwh					# 4583.51
 m.total_forward_kwh			# 4507.610000000001
@@ -72,7 +79,7 @@ m.reverse_kwh_t4			# 0.0
 m.volts_l1					# 123.9
 m.volts_l2					# 124.8
 m.volts_l3					# 0.0
-m.m.amps_l1					# 18.4
+m.amps_l1					# 18.4
 m.amps_l2					# 3.2
 m.amps_l3					# 0.0
 m.watts_l1					# 2276
