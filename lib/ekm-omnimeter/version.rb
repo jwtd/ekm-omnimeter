@@ -7,7 +7,7 @@ module EkmOmnimeter
   module VERSION #:nodoc:
     MAJOR = 0
     MINOR = 2
-    PATCH = 3
+    PATCH = 4
 
     STRING = [MAJOR, MINOR, PATCH].join('.')
   end

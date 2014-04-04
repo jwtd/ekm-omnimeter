@@ -25,7 +25,9 @@ Gem::Specification.new do |spec|
 
   # Runtime dependencies
   spec.add_runtime_dependency "log4r", "~> 1.1"
-  spec.add_runtime_dependency "xively-rb-connector", "~> 0.1"
 
+  #spec.add_runtime_dependency "xively-rb-connector", "~> 0.1"
+  #spec.add_runtime_dependency "trollop"
+  #spec.add_runtime_dependency "daemons"
 
 end

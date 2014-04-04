@@ -13,13 +13,16 @@ module EkmOmnimeter
     VALID_POWER_CONFIGURATIONS = [:single_phase_2wire, :single_phase_3wire, :three_phase_3wire, :three_phase_4wire]
 
     # Initialization attributes
-    attr_reader :meter_number, :remote_address, :remote_port, :power_configuration, :last_read_timestamp
+    attr_reader :meter_number, :remote_address, :remote_port, :verify_checksums, :power_configuration, :last_read_timestamp
 
     # Request A
     #attr_reader :meter_type, :meter_firmware, :address, :total_active_kwh, :total_kvarh, :total_rev_kwh, :three_phase_kwh, :three_phase_rev_kwh, :resettable_kwh, :resettable_reverse_kwh, :volts_l1, :volts_l2, :volts_l3, :amps_l1, :amps_l2, :amps_l3, :watts_l1, :watts_l2, :watts_l3, :watts_total, :cosϴ_l1, :cosϴ_l2, :cosϴ_l3, :var_l1, :var_l2, :var_l3, :var_total, :freq, :pulse_count_1, :pulse_count_2, :pulse_count_3, :pulse_input_hilo, :direction_of_current, :outputs_onoff, :kwh_data_decimal_places,
 
     # Request B
     #attr_reader :t1_t2_t3_t4_kwh, :t1_t2_t3_t4_rev_kwh, :maximum_demand, :maximum_demand_time, :pulse_ratio_1, :pulse_ratio_2, :pulse_ratio_3, :ct_ratio, :auto_reset_md, :settable_imp_per_kWh_constant
+
+    # iSerial v4 Spec From http://documents.ekmmetering.com/Omnimeter-Pulse-v.4-Protocol.pdf
+    # %w(01 52 31 02 30 30 31 31 28 29 03 13 16).map{|a| a.to_i(16).chr}.join
 
     # Mix in the ability to log
     include Logging
@@ -32,16 +35,19 @@ module EkmOmnimeter
       @logger.info "Initializing Meter"
 
       # Prepend the meter number with the correct amount of leading zeros
-      @meter_number   = options[:meter_number].to_s.rjust(12, '0')
-      @remote_address = options[:remote_address] || '192.168.0.125'
-      @remote_port    = options[:remote_port] || 50000
+      @meter_number     = options[:meter_number].to_s.rjust(12, '0')
+      @remote_address   = options[:remote_address] || '192.168.0.125'
+      @remote_port      = options[:remote_port] || 50000
+      @verify_checksums = options[:verify_checksums] || false
       @logger.debug  "meter_number: #{meter_number}"
       @logger.debug  "remote_address: #{remote_address}"
       @logger.debug  "remote_port: #{remote_port}"
+      @logger.debug  "verify_checksums: #{verify_checksums}"
 
       # Collect the power configurations
       if VALID_POWER_CONFIGURATIONS.index(options[:power_configuration])
         @power_configuration = options[:power_configuration]
+        @logger.debug  "power_configuration: #{@power_configuration}"
       else
         raise EkmOmnimeterError, "Invalid power configuration #{options[:power_configuration]}. Valid values are #{VALID_POWER_CONFIGURATIONS.join(', ')}"
       end
@@ -68,29 +74,21 @@ module EkmOmnimeter
       @values
     end
 
-    # Formatted datetime reported by meter during last read
-    def meter_timestamp
-      "20#{current_time[0,2]}-#{current_time[2,2]}-#{current_time[4,2]} #{current_time[6,2]}:#{current_time[ 8,2]}:#{current_time[10,2]}"
-    end
 
     # Attribute handler that delegates attribute reads to the values hash
     def method_missing(method_sym, *arguments, &block)
-
-      #@logger.debug "method_missing #{method_sym.inspect}"
-
       # Only refresh data if its more than 0.25 seconds old
       et = @last_read_timestamp.nil? ? 0 : (Time.now - @last_read_timestamp)
-      #logger.debug "Elapsed time since last read #{et}"
+      @logger.debug "Elapsed time since last read #{et}"
       if et > 250
-        @logger.info "More than 250 milliseconds have passed, updating data"
+        @logger.info "More than 250 milliseconds have passed since last read. Triggering refresh."
         read()
       end
 
       if @values.include? method_sym
-        #logger.debug "Found #{method_sym}"
         @values[method_sym]
       else
-        #logger.debug "Didn't find #{method_sym}"
+        @logger.debug "method_missing failed to find #{method_sym} in the Meter.values cache"
         super
       end
     end
@@ -104,59 +102,6 @@ module EkmOmnimeter
       end
     end
 
-
-    ## Request A
-    #d[:meter_type]              # 2 Byte Meter Type
-    #d[:meter_firmware]          # 1 Byte Meter Firmware
-    #d[:address]                 # 12 Bytes Address
-    #d[:total_active_kwh]        # 8 Bytes total Active kWh
-    #d[:total_kvarh]             # 8 Bytes Total kVARh
-    #d[:total_rev_kwh]           # 8 Bytes Total Rev.kWh
-    #d[:three_phase_kwh]         # 24 Bytes 3 phase kWh
-    #d[:three_phase_rev_kwh]     # 24 Bytes 3 phase Rev.kWh
-    #d[:resettable_kwh]          # 8 Bytes Resettable kWh
-    #d[:resettable_reverse_kwh]  # 8 bytes Resettable Reverse kWh
-    #d[:volts_l1]                # 4 Bytes Volts L1
-    #d[:volts_l2]                # 4 Bytes Volts L2
-    #d[:volts_l3]                # 4 Bytes Volts L3
-    #d[:amps_l1]                 # 5 Bytes Amps L1
-    #d[:amps_l2]                 # 5 Bytes Amps L2
-    #d[:amps_l3]                 # 5 Bytes Amps L3
-    #d[:watts_l1]                # 7 Bytes Watts L1
-    #d[:watts_l2]                # 7 Bytes Watts L2
-    #d[:watts_l3]                # 7 Bytes Watts L3
-    #d[:watts_total]             # 7 Bytes Watts Total
-    #d[:cosϴ_l1]                 # 4 Bytes Cosϴ L1
-    #d[:cosϴ_l2]                 # 4 Bytes Cosϴ L2
-    #d[:cosϴ_l3]                 # 4 Bytes Cosϴ L3
-    #d[:var_l1]                  # 7 Bytes VAR L1
-    #d[:var_l2]                  # 7 Bytes VAR L2
-    #d[:var_l3]                  # 7 Bytes VAR L3
-    #d[:var_total]               # 7 Bytes VAR Total
-    #d[:freq]                    # 4 Bytes Freq
-    #d[:pulse_count_1]           # 8 Bytes Pulse Count 1
-    #d[:pulse_count_2]           # 8 Bytes Pulse Count 2
-    #d[:pulse_count_3]           # 8 Bytes Pulse Count 3
-    #d[:pulse_input_hilo]        # 1 Byte Pulse Input Hi/Lo
-    #d[:direction_of_current]    # 1 Bytes direction of current
-    #d[:outputs_onoff]           # 1 Byte Outputs On/Off
-    #d[:kwh_data_decimal_places] # 1 Byte kWh Data Decimal Places
-
-    ## Request B
-    #d[:t1_t2_t3_t4_kwh]               # 32 Bytes T1, T2, T3, T4 kwh
-    #d[:t1_t2_t3_t4_rev_kwh]           # 32 Bytes T1, T2, T3, T4 Rev kWh
-    #d[:maximum_demand]                # 8 Bytes Maximum Demand
-    #d[:maximum_demand_time]           # 1 Byte Maximum Demand Time
-    #d[:pulse_ratio_1]                 # 4 Bytes Pulse Ratio 1
-    #d[:pulse_ratio_2]                 # 4 Bytes Pulse Ratio 2
-    #d[:pulse_ratio_3]                 # 4 Bytes Pulse Ratio 3
-    #d[:ct_ratio]                      # 4 Bytes CT Ratio
-    #d[:auto_reset_md]                 # 1 Bytes Auto Reset MD
-    #d[:settable_imp_per_kWh_constant] # 4 Bytes Settable Imp/kWh Constant
-
-
-    # iSerial v4 Spec From http://documents.ekmmetering.com/Omnimeter-Pulse-v.4-Protocol.pdf
-    # %w(01 52 31 02 30 30 31 31 28 29 03 13 16).map{|a| a.to_i(16).chr}.join
 
     # Returns the correct measurement for voltage, current, and power based on the corresponding power_configuration
     def calculate_measurement(m1, m2, m3)
@@ -185,6 +130,20 @@ module EkmOmnimeter
       end
     end
 
+    # Power factor values come back as C099 which need to be cast to C0.99
+    def cast_power_factor(s)
+      "#{s[0]}#{s[1,3].to_f / 100.0}"
+    end
+
+    # Formatted datetime reported by meter during last read.
+    # Raw string is formatted as YYMMDDWWHHMMSS where YY is year without century, and WW is week day with Sunday as the first day of the week
+    #"20#{current_time[0,2]}-#{current_time[2,2]}-#{current_time[4,2]} #{current_time[8,2]}:#{current_time[ 10,2]}:#{current_time[12,2]}"
+    def as_datetime(s)
+      DateTime.new("20#{s[0,2]}".to_i, s[2,2].to_i, s[4,2].to_i, s[8,2].to_i, s[10,2].to_i, s[12,2].to_i, '-4')
+    end
+
+    # All values are returned without decimals. This method loops over all
+    # the values and sets them to the correct precision
     def cast_response_to_correct_types(d)
 
       # Integers
@@ -224,10 +183,7 @@ module EkmOmnimeter
       end
 
       # Floats with precision 2
-      [:power_factor_1,
-       :power_factor_2,
-       :power_factor_3,
-       :frequency
+      [:frequency
       ].each do |k|
         logger.debug "Casting #{k}"
         d[k] = to_f_with_decimal_places(d[k], 2) if d.has_key?(k)
@@ -329,20 +285,31 @@ module EkmOmnimeter
       d[:outputs_onoff] = a.shift(1)           # 1 Byte Outputs On/Off
       d[:kwh_data_decimal_places] = a.shift(1) # 1 Byte kWh Data Decimal Places
       a.shift(2)                               # 2 Bytes Reserved
-      d[:current_time] = a.shift(14)           # 14 Bytes Current Time
+      meter_timestamp = a.shift(14).join('')   # 14 Bytes Current Time
       a.shift(6)                               # 30 30 21 0D 0A 03
-      d[:CRC16] = a.shift(2)                   # 2 Bytes CRC16
+      d[:checksum] = a.shift(2)                # 2 Bytes CRC16
 
       # Smash arrays into strungs
       d.each {|k,v| d[k] = v.join('')}
 
+      if verify_checksums
+        if Crc16.check_crc16(response, d[:checksum])
+          @logger.debug "Checksum matches"
+        else
+          @logger.error "CRC16 Checksum doesn't match. Expecting #{d[:checksum]} but was #{Crc16.crc16(response)}"
+          #raise EkmOmnimeterError, "Checksum doesn't match"
+        end
+      end
+
       # Cast types
       @values[:kwh_data_decimal_places] = d[:kwh_data_decimal_places].to_i
+      d[:power_factor_1] = cast_power_factor(d[:power_factor_1])
+      d[:power_factor_2] = cast_power_factor(d[:power_factor_2])
+      d[:power_factor_3] = cast_power_factor(d[:power_factor_3])
+      d[:meter_timestamp] = as_datetime(meter_timestamp)
       cast_response_to_correct_types(d)
 
       # Lookup mapped values
-      puts "d[:pulse_input_hilo] = #{d[:pulse_input_hilo].inspect}"
-
       d[:pulse_1_input], d[:pulse_2_input], d[:pulse_3_input] = lookup_pulse_input_states(d[:pulse_input_hilo])
       d[:current_direction_l1], d[:current_direction_l2], d[:current_direction_l3] = lookup_direction_of_current(d[:direction_of_current])
       d[:output_1], d[:output_2] = lookup_output_states(d[:outputs_onoff])
@@ -352,7 +319,6 @@ module EkmOmnimeter
       @last_read_timestamp = Time.now
 
       # Calculate totals based on wiring configuration
-      @values[:meter_timestamp] = meter_timestamp
       @values[:volts] = calculate_measurement(volts_l1, volts_l2, volts_l3)
       @values[:amps]  = calculate_measurement(amps_l1, amps_l2, amps_l3)
       @values[:watts] = calculate_measurement(watts_l1, watts_l2, watts_l3)
@@ -363,7 +329,6 @@ module EkmOmnimeter
       return d
 
     end
-
 
     # Request B
     # TODO: Instead of pre-parsing and casting everything, refactor this so that only the response string gets saved, and  parse out values that are accessed.
@@ -428,14 +393,27 @@ module EkmOmnimeter
       d[:settable_pulse_per_kwh_ratio] = a.shift(4)  # 4 Bytes Settable Imp/kWh Constant
       # Diff from request A end
       a.shift(56)                              # 56 Bytes Reserved
-      d[:current_time] = a.shift(14)           # 14 Bytes Current Time
+      meter_timestamp = a.shift(14).join('')   # 14 Bytes Current Time
       a.shift(6)                               # 30 30 21 0D 0A 03
-      d[:checksum] = a.shift(2)                # 2 Bytes CRC16
+      d[:checksum] = a.shift(2)                   # 2 Bytes CRC16
 
       # Smash arrays into strungs
       d.each {|k,v| d[k] = v.join('')}
 
+      if verify_checksums
+        if Crc16.check_crc16(response, d[:checksum])
+          @logger.debug "Checksum matches"
+        else
+          @logger.error "CRC16 Checksum doesn't match. Expecting #{d[:checksum]} but was #{Crc16.crc16(response)}"
+          #raise EkmOmnimeterError, "Checksum doesn't match"
+        end
+      end
+
       # Cast types
+      d[:power_factor_1] = cast_power_factor(d[:power_factor_1])
+      d[:power_factor_2] = cast_power_factor(d[:power_factor_2])
+      d[:power_factor_3] = cast_power_factor(d[:power_factor_3])
+      d[:meter_timestamp] = as_datetime(meter_timestamp)
       cast_response_to_correct_types(d)
 
       # Lookup mapped values
@@ -447,7 +425,6 @@ module EkmOmnimeter
       @last_read_timestamp = Time.now
 
       # Calculate totals based on wiring configuration
-      @values[:meter_timestamp] = meter_timestamp
       @values[:volts] = calculate_measurement(volts_l1, volts_l2, volts_l3)
       @values[:amps]  = calculate_measurement(amps_l1, amps_l2, amps_l3)
       @values[:watts] = calculate_measurement(watts_l1, watts_l2, watts_l3)
@@ -456,7 +433,6 @@ module EkmOmnimeter
       return d
 
     end
-
 
 
     # Gets remote EKM meter data using iSerial defaults
@@ -473,24 +449,24 @@ module EkmOmnimeter
       begin
 
         socket = TCPSocket.new(remote_address, remote_port)
-        logger.debug "Socket open" unless logger.nil?
+        @logger.debug "Socket open"
 
         # Send request to the meter
-        logger.debug "Request: #{request}" unless logger.nil?
+        @logger.debug "Request: #{request}"
         socket.write(request)
 
         # Receive a response of 255 bytes
         response = socket.read(read_bytes)
-        logger.debug "Socket response #{response.length}" unless logger.nil?
-        logger.debug response unless logger.nil?
+        @logger.debug "Socket response #{response.length}"
+        @logger.debug response
 
       rescue Exception => ex
-        logger.error "Exception\n#{ex.message}\n#{ex.backtrace.join("\n")}" unless logger.nil?
+        @logger.error "Exception\n#{ex.message}\n#{ex.backtrace.join("\n")}"
       ensure
         # EKM Meter software sends this just before closing the connection, so we will too
         socket.write "\x0a\x03\x32\x3d"
         socket.close
-        logger.debug "Socket closed" unless logger.nil?
+        @logger.debug "Socket closed"
       end
 
       return response
