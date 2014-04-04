@@ -89,7 +89,7 @@ m.power_factor_1			# 1.0
 m.power_factor_2			# 0.0
 m.power_factor_3			# 0.0
 m.maximum_demand			# 22640.0
-m.maximum_demand_period		# 1
+m.maximum_demand_period		# 15        (in minutes, can be 15, 30 or 60)
 m.ct_ratio					# 400
 m.pulse_1_count				# 3
 m.pulse_1_ratio				# 1000
@@ -111,11 +111,16 @@ m.reactive_power_2			# 60
 m.reactive_power_3			# 0
 m.total_reactive_power		# 84
 m.frequency					# 60.04
-m.pulse_input_hilo			# 0
-m.direction_of_current		# 1
-m.outputs_onoff				# 1
+m.pulse_1_input				# low
+m.pulse_2_input				# high
+m.pulse_3_input				# high
+m.current_direction_l1	    # forward
+m.current_direction_l2	    # forward
+m.current_direction_l3	    # forward
+m.output_1		   	   	   	# off
+m.output_2		   	   	   	# off
 m.kwh_data_decimal_places	# 2
-m.auto_reset_max_demand		# 0
+m.auto_reset_max_demand	    # off
 m.settable_pulse_per_kwh_ratio	# 800
 
 

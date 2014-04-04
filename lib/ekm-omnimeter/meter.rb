@@ -340,6 +340,13 @@ module EkmOmnimeter
       @values[:kwh_data_decimal_places] = d[:kwh_data_decimal_places].to_i
       cast_response_to_correct_types(d)
 
+      # Lookup mapped values
+      puts "d[:pulse_input_hilo] = #{d[:pulse_input_hilo].inspect}"
+
+      d[:pulse_1_input], d[:pulse_2_input], d[:pulse_3_input] = lookup_pulse_input_states(d[:pulse_input_hilo])
+      d[:current_direction_l1], d[:current_direction_l2], d[:current_direction_l3] = lookup_direction_of_current(d[:direction_of_current])
+      d[:output_1], d[:output_2] = lookup_output_states(d[:outputs_onoff])
+
       # Merge to values and reset time
       @values.merge!(d)
       @last_read_timestamp = Time.now
@@ -431,6 +438,10 @@ module EkmOmnimeter
       # Cast types
       cast_response_to_correct_types(d)
 
+      # Lookup mapped values
+      d[:maximum_demand_period] = lookup_demand_period_time(d[:maximum_demand_period])
+      d[:auto_reset_max_demand] = lookup_auto_reset_max_demand_period(d[:auto_reset_max_demand])
+
       # Merge to values and reset time
       @values.merge!(d)
       @last_read_timestamp = Time.now
@@ -484,6 +495,71 @@ module EkmOmnimeter
 
       return response
 
+    end
+
+
+
+    PULSE_INPUT_STATE_MAP = {
+      0 => [:high,:high,:high], # High/High/High = 0 (30)
+      1 => [:high,:high,:low],  # High/High/Low  = 1 (31)
+      2 => [:high,:low,:high],  # High/Low/High  = 2 (32)
+      3 => [:high,:low,:low],   # High Low/Low   = 3 (33)
+      4 => [:low,:high,:high],  # Low/High/High  = 4 (34)
+      5 => [:low,:high,:low],   # Low/High/Low   = 5 (35)
+      6 => [:low,:low,:high],   # Low/Low/High   = 6 (36)
+      7 => [:low,:low,:low]     # Low/Low/Low    = 7 (37)
+    }
+    def lookup_pulse_input_states(v)
+      PULSE_INPUT_STATE_MAP[v.to_i]
+    end
+
+
+    DIRECTION_OF_CURRENT_MAP = {
+      #Line1/Line2/Line3
+      1 => [:forward,:forward,:forward],  #Forward/Forward/Forward = 1 (31)
+      2 => [:forward,:forward,:reverse],  #Forward/Forward/Reverse = 2 (32)
+      3 => [:forward,:reverse,:forward],  #Forward/Reverse/Forward = 3 (33)
+      4 => [:reverse,:forward,:forward],  #Reverse/Forward/Forward = 4 (34)
+      5 => [:forward,:reverse,:reverse],  #Forward/Reverse/Reverse = 5 (35)
+      6 => [:reverse,:forward,:reverse],  #Reverse/Forward/Reverse = 6 (36)
+      7 => [:reverse,:reverse,:forward],  #Reverse/Reverse/Forward = 7 (37)
+      8 => [:reverse,:reverse,:reverse]   #Reverse/Reverse/Reverse = 8 (38)
+    }
+    def lookup_direction_of_current(v)
+      DIRECTION_OF_CURRENT_MAP[v.to_i]
+    end
+
+
+    OUTPUT_INDICATOR_MAP = {
+      1 => [:off,:off], # OFF/OFF = 1 (31)
+      2 => [:off,:on],  # OFF/ON  = 2 (32)
+      3 => [:on,:off],  # ON/OFF  = 3 (33)
+      4 => [:on,:on]    # ON/ON   = 4 (34)
+    }
+    def lookup_output_states(v)
+      OUTPUT_INDICATOR_MAP[v.to_i]
+    end
+
+
+    DEMAND_PERIOD_TIME_MAP = {
+      1 => 15,  # 15 min = 1 (31)
+      2 => 30,  # 30 min = 2 (31)
+      3 => 60   # Hour   = 3 (31)
+    }
+    def lookup_demand_period_time(v)
+      DEMAND_PERIOD_TIME_MAP[v.to_i]
+    end
+
+
+    AUTO_RESET_MAX_DEMAND_MAP = {
+      0 => :off,     # OFF = 0 (30)
+      1 => :monthly, # Monthly = 1 (31)
+      2 => :weekly,  # Weekly = 2 (32)
+      3 => :daily,   # Daily = 3 (33)
+      4 => :hourly   # Hourly = 4 (34)
+    }
+    def lookup_auto_reset_max_demand_period(v)
+      AUTO_RESET_MAX_DEMAND_MAP[v.to_i]
     end
 
   end
