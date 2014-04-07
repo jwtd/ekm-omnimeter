@@ -93,7 +93,7 @@ module EkmOmnimeter
       @meter_number     = options[:meter_number].to_s.rjust(12, '0')
       @remote_address   = options[:remote_address] || '192.168.0.125'
       @remote_port      = options[:remote_port] || 50000
-      @verify_checksums = options[:verify_checksums] || false
+      @verify_checksums = options[:verify_checksums] || true
       @logger.debug  "meter_number: #{meter_number}"
       @logger.debug  "remote_address: #{remote_address}"
       @logger.debug  "remote_port: #{remote_port}"
@@ -415,7 +415,7 @@ module EkmOmnimeter
     # TODO: The CRC16 checksum isn't working yet
     def verify_checksum(response, expecting)
       if verify_checksums
-        if Crc16.check_crc16(response[1..-3], expecting)
+        if Crc16.ekm_crc16_matches?(response[1..-3], expecting)
           @logger.debug "Checksum matches"
         else
           @logger.error "CRC16 Checksum doesn't match. Expecting #{expecting} but was #{Crc16.crc16(response)}"

@@ -1,11 +1,23 @@
 module Crc16
 
   # Returns boolean true or false if checksum of string s matches expected value
-  def self.check_crc16(s, expecting)
-    (Crc16.crc16(s) == expecting)
+  def self.ekm_crc16_matches?(s, expecting)
+    puts "Expecting:\t#{expecting.inspect}  ->  #{expecting.unpack('H*')[0].inspect}"
+    (Crc16.ekm_checksum(s) == expecting)
   end
 
-  # Calculates CRC16 checksum of string buf
+  # According to http://forum.ekmmetering.com/viewtopic.php?f=4&t=5#p557
+  def self.ekm_checksum(s)
+    crc = Crc16.crc16(s)                    # Start with a normal CRC16
+    puts "Normal CRC:\t#{crc.inspect}"
+    crc = Crc16.convertLEBytesToNative(crc) # Little Endian processors need to reverse the Bigendian
+    puts "LE CRC:\t#{crc.inspect}"
+    crc = crc & 0x7F7F                      # Get a CRC14 by masking out the 7th and 15th bits
+    puts "Masked LE CRC:\t#{crc.inspect}"
+    crc
+  end
+
+  # Normal CRC16 calculation
   def self.crc16(buf)
     crc = 0x00
     buf.each_byte do |b|
@@ -13,6 +25,29 @@ module Crc16
     end
     crc
   end
+
+  # Converts BigEndian to LittleEndian
+  def self.convertLEBytesToNative( bytes )
+    puts "bytes:\n#{bytes.inspect}"
+    if ( [1].pack('V').unpack('l').first == 1 )
+      # machine is already little endian
+      bytes.unpack('l')
+    else
+      # machine is big endian
+      convertLEToNative( Array(bytes.unpack('l')))
+    end
+  end
+
+  # Convert a given 4 byte integer from little-endian to the running machine's native endianess.  The pack('V')
+  # operation takes the given number and converts it to little-endian (which means that if the machine is little
+  # endian, no conversion occurs).  On a big-endian machine, the pack('V') will swap the bytes because that's what it
+  # has to do to convert from big to little endian. Since the number is already little endian, the swap has the
+  # opposite effect (converting from little-endian to big-endian), which is what we want. In both cases, the
+  # unpack('l') just produces a signed integer from those bytes, in the machine's native endianess.
+  def self.convertLEToNative( num )
+    Array(num).pack('V').unpack('l')
+  end
+
 
   private
 
