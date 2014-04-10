@@ -82,21 +82,22 @@ module EkmOmnimeter
     attr_reader :meter_number, :remote_address, :remote_port, :verify_checksums, :power_configuration, :last_read_timestamp
 
     # Mix in the ability to log
-    include Logging
+    include Logger
 
     def initialize(options)
 
+      puts "Initializing Meter"
+
       @logger = logger || options[:logger]
-      @logger.info "Initializing Meter"
+      puts "@logger = #{@logger}"
 
       # Prepend the meter number with the correct amount of leading zeros
       @meter_number     = options[:meter_number].to_s.rjust(12, '0')
       @remote_address   = options[:remote_address] || '192.168.0.125'
       @remote_port      = options[:remote_port] || 50000
-      @verify_checksums = options[:verify_checksums] || true
-      @logger.debug  "meter_number: #{meter_number}"
-      @logger.debug  "remote_address: #{remote_address}"
-      @logger.debug  "remote_port: #{remote_port}"
+      @logger.debug  "Initialize meter #{meter_number} at #{remote_address}:#{remote_port}"
+
+      @verify_checksums = options[:verify_checksums] || false # TODO: CRC Checksum isn't working, so default is off
       @logger.debug  "verify_checksums: #{verify_checksums}"
 
       # Collect the power configurations

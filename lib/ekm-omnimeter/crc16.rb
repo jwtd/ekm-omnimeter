@@ -2,18 +2,22 @@ module Crc16
 
   # Returns boolean true or false if checksum of string s matches expected value
   def self.ekm_crc16_matches?(s, expecting)
-    puts "Expecting:\t#{expecting.inspect}  ->  #{expecting.unpack('H*')[0].inspect}"
+    #puts "Response snippet:\n#{s.inspect}"
+    #puts "Expecting:\t#{expecting.inspect}  ->  #{expecting.unpack('H*')[0].inspect}"
+    #puts "Response snippet using s.bytes\n#{s.bytes}"
+    #puts "Response snippet using s.split("").map{ |i| i.unpack('H*')[0]}\n#{s.split("").map{ |i| i.unpack('H*')[0]}}"
+    #puts "Response snippet using Array(s).pack('H*')\n#{Array(s).pack('H*').inspect}"
     (Crc16.ekm_checksum(s) == expecting)
   end
 
   # According to http://forum.ekmmetering.com/viewtopic.php?f=4&t=5#p557
   def self.ekm_checksum(s)
     crc = Crc16.crc16(s)                    # Start with a normal CRC16
-    puts "Normal CRC:\t#{crc.inspect}"
-    crc = Crc16.convertLEBytesToNative(crc) # Little Endian processors need to reverse the Bigendian
-    puts "LE CRC:\t#{crc.inspect}"
+    #puts "Normal CRC:\t#{crc.inspect}"
+    #crc = Crc16.convertLEBytesToNative(crc) # Little Endian processors need to reverse the Bigendian
+    #puts "LE CRC:\t#{crc.inspect}"
     crc = crc & 0x7F7F                      # Get a CRC14 by masking out the 7th and 15th bits
-    puts "Masked LE CRC:\t#{crc.inspect}"
+    #puts "Masked LE CRC:\t#{crc.inspect}"
     crc
   end
 
@@ -21,6 +25,7 @@ module Crc16
   def self.crc16(buf)
     crc = 0x00
     buf.each_byte do |b|
+      #puts "Byte #{b.inspect}"
       crc = ((crc >> 8) & 0xff) ^ CRC_LOOKUP[(crc ^ b) & 0xff]
     end
     crc
@@ -28,12 +33,14 @@ module Crc16
 
   # Converts BigEndian to LittleEndian
   def self.convertLEBytesToNative( bytes )
-    puts "bytes:\n#{bytes.inspect}"
+    # Check to see if this machine is already little endian
     if ( [1].pack('V').unpack('l').first == 1 )
-      # machine is already little endian
+      # Machine is already little endian"
+      #puts "Machine is already little endian"
       bytes.unpack('l')
     else
       # machine is big endian
+      #puts "Machine is big endian, so convert"
       convertLEToNative( Array(bytes.unpack('l')))
     end
   end
@@ -45,6 +52,7 @@ module Crc16
   # opposite effect (converting from little-endian to big-endian), which is what we want. In both cases, the
   # unpack('l') just produces a signed integer from those bytes, in the machine's native endianess.
   def self.convertLEToNative( num )
+    #puts "Converting to little endian"
     Array(num).pack('V').unpack('l')
   end
 
