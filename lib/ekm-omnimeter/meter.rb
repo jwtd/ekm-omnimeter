@@ -86,10 +86,7 @@ module EkmOmnimeter
 
     def initialize(options)
 
-      puts "Initializing Meter"
-
       @logger = logger || options[:logger]
-      puts "@logger = #{@logger}"
 
       # Prepend the meter number with the correct amount of leading zeros
       @meter_number     = options[:meter_number].to_s.rjust(12, '0')

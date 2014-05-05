@@ -4,6 +4,22 @@
 
 require 'ekm-omnimeter'
 
+# Block style configuration
+EkmOmnimeter.configure do |c|
+
+  # Logging Configuration
+  c.log_level            = 'debug'    # :off, :all, :debug, :info, :warn, :error, :fatal
+  c.trace_exceptions     = true       # Default is true
+  c.log_to_stdout        = false      # Default is true
+  c.stdout_colors        = :for_dark_background
+  c.log_file             = 'ekm.log'  # Default is nil
+  c.log_file_layout      = '[%d] %-5l -- %c -- %m\n'     # :basic, :json, :yaml, or a pattern such as '[%d] %-5l: %m\n'
+  c.rolling_log_file_age = :daily     # Default is false
+  c.rolling_log_limit    = 11         # Default is false, but any positive integer can be passed
+  c.growl_on_error       = false      # Default is false
+
+end
+
 # Connect to a meter
 m = EkmOmnimeter::Meter.new(
     :power_configuration => :single_phase_3wire,
