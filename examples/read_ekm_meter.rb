@@ -1,14 +1,15 @@
 # :stopdoc:
 #
-# This is the code I use to generate the property list in the readme.
+# This is the code I use to generatebundle  the property list in the readme.
 
+$:.push File.expand_path("../../lib", __FILE__)
 require 'ekm-omnimeter'
 
 # Block style configuration
 EkmOmnimeter.configure do |c|
 
   # Logging Configuration
-  c.log_level            = 'debug'    # :off, :all, :debug, :info, :warn, :error, :fatal
+  c.log_level            = :debug    # :off, :all, :debug, :info, :warn, :error, :fatal
   c.trace_exceptions     = true       # Default is true
   c.log_to_stdout        = false      # Default is true
   c.stdout_colors        = :for_dark_background
@@ -19,6 +20,7 @@ EkmOmnimeter.configure do |c|
   c.growl_on_error       = false      # Default is false
 
 end
+
 
 # Connect to a meter
 m = EkmOmnimeter::Meter.new(

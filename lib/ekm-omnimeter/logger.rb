@@ -39,8 +39,10 @@ module EkmOmnimeter
 
     # Collect and validate log level
     log_level = options[:log_level] || configuration.log_level
+    log_level = log_level.to_sym
     raise "Can not initialize global logger, because #{log_level.inspect} is an unrecognized log level." unless [:off, :all, :debug, :info, :warn, :error, :fatal].include?(log_level.to_sym)
-    Logging.logger.root.level = log_level.to_sym
+    Logging.logger.root.level = log_level
+    puts "EKM log_level: #{log_level}"
 
     # When set to true backtraces will be written to the logs
     trace_exceptions = options[:trace_exceptions] || configuration.trace_exceptions
@@ -49,6 +51,7 @@ module EkmOmnimeter
     # Check to see if we should log to stdout
     log_to_stdout = options[:log_to_stdout] || configuration.log_to_stdout
     if log_to_stdout
+      puts "EKM log_to_stdout: #{log_to_stdout}"
 
       # Setup colorized output for stdout (this scheme was setup for a terminal with a black background)
       # :black, :red, :green, :yellow, :blue, :magenta, :cyan, :white
@@ -97,6 +100,7 @@ module EkmOmnimeter
     # Setup file logger
     log_file = options[:log_file] || configuration.log_file
     if log_file
+      puts "EKM log_file: #{log_file}"
 
       # Make sure log directory exists
       log_file = File.expand_path(log_file)
@@ -124,6 +128,7 @@ module EkmOmnimeter
 
       # Build the file appender
       if rolling
+        puts "EKM log rolling: #{rolling}"
         rolling_limit = options[:rolling_log_limit] || configuration.rolling_log_limit
         Logging.logger.root.add_appenders Logging.appenders.rolling_file(
                             log_file,
@@ -140,6 +145,7 @@ module EkmOmnimeter
       # Growl on error
       growl_on_error = options[:growl_on_error] || configuration.growl_on_error
       if options[:growl_on_error]
+        puts "EKM growl_on_error: #{growl_on_error}"
         Logging.logger.root.add_appenders Logging.appenders.growl(
                             'growl',
                             :level  => :error,
@@ -155,12 +161,12 @@ module EkmOmnimeter
 
   module Logger
 
-    def logger
-      @logger ||= EkmOmnimeter::Logger.logger
+    def logger(klass=nil)
+      @logger ||= EkmOmnimeter::Logger.logger(klass)
     end
 
-    def self.logger
-      @logger ||= self.configure_logger_for(self.class.name)
+    def self.logger(klass=nil)
+      @logger ||= self.configure_logger_for(klass.class.name)
     end
 
     def self.configure_logger_for(classname)

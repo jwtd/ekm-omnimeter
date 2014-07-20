@@ -86,23 +86,29 @@ module EkmOmnimeter
 
     def initialize(options)
 
-      @logger = logger || options[:logger]
+      puts "EKM initialize options"
+      pp options
+
+      @logger = logger(self) || options[:logger]
 
       # Prepend the meter number with the correct amount of leading zeros
       @meter_number     = options[:meter_number].to_s.rjust(12, '0')
       @remote_address   = options[:remote_address] || '192.168.0.125'
       @remote_port      = options[:remote_port] || 50000
+
       @logger.debug  "Initialize meter #{meter_number} at #{remote_address}:#{remote_port}"
 
       @verify_checksums = options[:verify_checksums] || false # TODO: CRC Checksum isn't working, so default is off
       @logger.debug  "verify_checksums: #{verify_checksums}"
 
       # Collect the power configurations
-      if VALID_POWER_CONFIGURATIONS.index(options[:power_configuration])
-        @power_configuration = options[:power_configuration]
+      pc = options[:power_configuration] || :single_phase_3wire
+      pc = pc.to_sym
+      if VALID_POWER_CONFIGURATIONS.index(pc)
+        @power_configuration = pc
         @logger.debug  "power_configuration: #{@power_configuration}"
       else
-        raise EkmOmnimeterError, "Invalid power configuration #{options[:power_configuration]}. Valid values are #{VALID_POWER_CONFIGURATIONS.join(', ')}"
+        raise EkmOmnimeterError, "Invalid power configuration #{pc}. Valid values are #{VALID_POWER_CONFIGURATIONS.join(', ')}"
       end
 
       # Collect pulse inputs
@@ -167,7 +173,7 @@ module EkmOmnimeter
       # /?00000000012300! then a CRLF
       request = "/?" + meter_number + "00!\r\n"
       read_bytes = 255
-      @logger.debug "Socket write #{request}" unless logger.nil?
+      @logger.debug "Socket write #{request}"
       response = get_remote_meter_data(request, read_bytes)
 
       if response.nil?
@@ -519,7 +525,13 @@ module EkmOmnimeter
     # Returns a Ruby datatime derived from the string representing the time on the meter when the values were captured
     # The raw string's format is YYMMDDWWHHMMSS where YY is year without century, and WW is week day with Sunday as the first day of the week
     def as_datetime(s)
-      DateTime.new("20#{s[0,2]}".to_i, s[2,2].to_i, s[4,2].to_i, s[8,2].to_i, s[10,2].to_i, s[12,2].to_i, '-4')
+      begin
+        d = DateTime.new("20#{s[0,2]}".to_i, s[2,2].to_i, s[4,2].to_i, s[8,2].to_i, s[10,2].to_i, s[12,2].to_i, '-4')
+      rescue
+        logger.error "Could not create valid datetime from #{s}\nDateTime.new(20#{s[0,2]}, #{s[2,2]}, #{s[4,2]}, #{s[8,2]}, #{s[10,2]}, #{s[12,2]}, '-4')"
+        d = DateTime.now()
+      end
+      d
     end
 
 
